@@ -150,7 +150,7 @@ for i_episode in itertools.count(1):
 
     if total_numsteps > args.num_steps:
         break
-    
+
     wandb.log({'reward_train': episode_reward})
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
@@ -160,13 +160,24 @@ for i_episode in itertools.count(1):
         episodes = 10
         for _ in range(episodes):
             state = env.reset()
+            objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
+            robot_pos = env._get_info()
+            robot_pos = np.array(list(robot_pos.values()))
+            state = np.concatenate([state, robot_pos])
             episode_reward = 0
             done = False
             while not done:
                 # env.render(mode='human')
-                action = agent.select_action(state, evaluate=True)
+                percentage = env.position_on_track/env.track.length
+                percentage = percentage if percentage > 0 else 0
+                objective_idx = int(objectives.shape[0]*percentage)
+                objective = objectives[objective_idx]
+                action = agent.select_action(np.concatenate([state, objective]),
+                                             evaluate=True)
 
-                next_state, reward, done, _ = env.step(action)
+                next_state, reward, done, robot_pos = env.step(action)  # Step
+                robot_pos = np.array(list(robot_pos.values()))
+                next_state = np.concatenate([next_state, robot_pos])
                 episode_reward += reward
 
                 state = next_state
