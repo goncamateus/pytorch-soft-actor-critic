@@ -163,7 +163,7 @@ for i_episode in itertools.count(1):
             episode_reward = 0
             done = False
             while not done:
-                env.render(mode='human')
+                # env.render(mode='human')
                 action = agent.select_action(state, evaluate=True)
 
                 next_state, reward, done, _ = env.step(action)
