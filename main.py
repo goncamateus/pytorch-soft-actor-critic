@@ -135,8 +135,8 @@ for i_episode in itertools.count(1):
         state = next_state
 
     for i, (state, action, reward, done, next_state, goal) in enumerate(episode):
-        g1 = state[-2:]
-        g2 = next_state[-2:]
+        g1 = state[-3:-1]
+        g2 = next_state[-3:-1]
         d1 = np.linalg.norm(g1-goal)
         d2 = np.linalg.norm(g2-goal)
         if d2 > d1 and i > 0:
