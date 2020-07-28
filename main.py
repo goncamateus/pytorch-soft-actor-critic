@@ -5,12 +5,15 @@ import itertools
 import gym
 import numpy as np
 import torch
+import wandb
 from torch.utils.tensorboard import SummaryWriter
 
 import gym_line_follower
 from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
+
+wandb.init(name="LineFollower-GoncaExp", project="Cadeira-RL")
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
@@ -28,7 +31,7 @@ parser.add_argument('--lr', type=float, default=0.0003, metavar='G',
 parser.add_argument('--alpha', type=float, default=0.2, metavar='G',
                     help='Temperature parameter α determines the relative importance of the entropy\
                             term against the reward (default: 0.2)')
-parser.add_argument('--automatic_entropy_tuning', type=bool, default=False, metavar='G',
+parser.add_argument('--automatic_entropy_tuning', type=bool, default=True, metavar='G',
                     help='Automaically adjust α (default: False)')
 parser.add_argument('--seed', type=int, default=123456, metavar='N',
                     help='random seed (default: 123456)')
@@ -106,11 +109,11 @@ for i_episode in itertools.count(1):
                 critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(
                     memory, args.batch_size, updates)
 
-                writer.add_scalar('loss/critic_1', critic_1_loss, updates)
-                writer.add_scalar('loss/critic_2', critic_2_loss, updates)
-                writer.add_scalar('loss/policy', policy_loss, updates)
-                writer.add_scalar('loss/entropy_loss', ent_loss, updates)
-                writer.add_scalar('entropy_temprature/alpha', alpha, updates)
+                wandb.log({"critic_1": critic_1_loss,
+                           "critic_2": critic_2_loss,
+                           "policy": policy_loss,
+                           "entropy_loss": ent_loss,
+                           "temp_alpha": alpha})
                 updates += 1
 
         next_state, reward, done, robot_pos = env.step(action)  # Step
@@ -147,8 +150,8 @@ for i_episode in itertools.count(1):
 
     if total_numsteps > args.num_steps:
         break
-
-    writer.add_scalar('reward/train', episode_reward, i_episode)
+    
+    wandb.log({'reward_train': episode_reward})
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
@@ -170,7 +173,7 @@ for i_episode in itertools.count(1):
             avg_reward += episode_reward
         avg_reward /= episodes
 
-        writer.add_scalar('avg_reward/test', avg_reward, i_episode)
+        wandb.log({'reward_test': avg_reward})
 
         print("----------------------------------------")
         print("Test Episodes: {}, Avg. Reward: {}".format(
