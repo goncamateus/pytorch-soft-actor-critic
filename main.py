@@ -13,7 +13,7 @@ from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 
-wandb.init(name="LineFollower-normal", project="Cadeira-RL")
+wandb.init(name="LineFollower-normal-home", project="Cadeira-RL")
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
@@ -57,7 +57,7 @@ args = parser.parse_args()
 # env = NormalizedActions(gym.make(args.env_name))
 # env = gym.make(args.env_name)
 env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
-                      max_time=10, power_limit=0.99)
+                      max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
 # env.action_space.seed(args.seed)
@@ -66,7 +66,7 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(env.observation_space.shape[0]+3, env.action_space, args)
+agent = SAC(env.observation_space.shape[0], env.action_space, args)
 
 # Tesnorboard
 writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"), args.env_name,
@@ -85,10 +85,6 @@ for i_episode in itertools.count(1):
     done = False
     episode = []
     state = env.reset()
-    objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
-    robot_pos = env._get_info()
-    robot_pos = np.array(list(robot_pos.values()))
-    state = np.concatenate([state, robot_pos])
     while not done:
         if args.start_steps > total_numsteps:
             action = env.action_space.sample()  # Sample random action
@@ -110,10 +106,6 @@ for i_episode in itertools.count(1):
                 updates += 1
 
         next_state, reward, done, robot_pos = env.step(action)  # Step
-        if len(episode) % 49 != 0:
-            reward = 0
-        robot_pos = np.array(list(robot_pos.values()))
-        next_state = np.concatenate([next_state, robot_pos])
         episode_steps += 1
         total_numsteps += 1
         episode_reward += reward
@@ -134,12 +126,9 @@ for i_episode in itertools.count(1):
 
     if i_episode % 100 == 0 and args.eval is True:
         avg_reward = 0.
-        episodes = 10
+        episodes = 3
         for _ in range(episodes):
             state = env.reset()
-            robot_pos = env._get_info()
-            robot_pos = np.array(list(robot_pos.values()))
-            state = np.concatenate([state, robot_pos])
             episode_reward = 0
             done = False
             while not done:
@@ -147,8 +136,6 @@ for i_episode in itertools.count(1):
                 action = agent.select_action(state, evaluate=True)
 
                 next_state, reward, done, robot_pos = env.step(action)  # Step
-                robot_pos = np.array(list(robot_pos.values()))
-                next_state = np.concatenate([next_state, robot_pos])
                 episode_reward += reward
 
                 state = next_state
