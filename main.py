@@ -144,7 +144,7 @@ for i_episode in itertools.count(1):
             done = False
             while not done:
                 # env.render(mode='human')
-                action = agent.select_action(state), evaluate=True)
+                action = agent.select_action(state, evaluate=True)
 
                 next_state, reward, done, robot_pos = env.step(action)  # Step
                 robot_pos = np.array(list(robot_pos.values()))
