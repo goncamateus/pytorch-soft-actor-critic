@@ -13,7 +13,7 @@ from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 
-wandb.init(name="LineFollower-normal", project="Cadeira-RL")
+wandb.init(name="LineFollower-GoncaExp", project="Cadeira-RL")
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
@@ -73,7 +73,7 @@ writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().str
                                                      args.policy, "autotune" if args.automatic_entropy_tuning else ""))
 
 # Memory
-memory = ReplayMemory(args.replay_size, args.seed)
+memory = ReplayGMemory(args.replay_size, args.seed)
 
 # Training Loop
 total_numsteps = 0
@@ -89,11 +89,18 @@ for i_episode in itertools.count(1):
     robot_pos = env._get_info()
     robot_pos = np.array(list(robot_pos.values()))
     state = np.concatenate([state, robot_pos])
+    worst_goal = np.array([[np.min(env.track.x), np.min(env.track.y)],
+                           [np.max(env.track.x), np.max(env.track.y)]])
+    worst_dist = np.linalg.norm(worst_goal[0]-worst_goal[1])
     while not done:
+        percentage = env.position_on_track/env.track.length
+        percentage = percentage if percentage > 0 else 0
+        objective_idx = int(objectives.shape[0]*percentage)
+        objective = objectives[objective_idx]
         if args.start_steps > total_numsteps:
             action = env.action_space.sample()  # Sample random action
         else:
-            action = agent.select_action(state)
+            action = agent.select_action(np.concatenate([state, objective]))
 
         if len(memory) > args.batch_size:
             # Number of updates per step in environment
@@ -122,8 +129,25 @@ for i_episode in itertools.count(1):
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
         mask = float(not done)
         # Append transition to memory
-        memory.push(state, action, reward, next_state, mask)
+        memory.push(state, action, reward, next_state, mask, objective)
+        episode.append((state, action, reward, mask, next_state, objective))
+
         state = next_state
+
+    for i, (state, action, reward, done, next_state, goal) in enumerate(episode):
+        g1 = state[-3:-1]
+        g2 = next_state[-3:-1]
+        d1 = np.linalg.norm(g1-goal)
+        d2 = np.linalg.norm(g2-goal)
+        if d2 > d1 and i > 0:
+            state_bef = episode[i-1][0]
+            action_bef = episode[i-1][1]
+            reward_bef = episode[i-1][2]
+            done_bef = episode[i-1][3]
+            new_reward = 1 - d1/worst_dist
+            episode_reward += new_reward
+            memory.push(
+                state_bef, action_bef, new_reward, state, done_bef, g1)
 
     if total_numsteps > args.num_steps:
         break
@@ -137,6 +161,7 @@ for i_episode in itertools.count(1):
         episodes = 10
         for _ in range(episodes):
             state = env.reset()
+            objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
             robot_pos = env._get_info()
             robot_pos = np.array(list(robot_pos.values()))
             state = np.concatenate([state, robot_pos])
@@ -144,7 +169,12 @@ for i_episode in itertools.count(1):
             done = False
             while not done:
                 # env.render(mode='human')
-                action = agent.select_action(state), evaluate=True)
+                percentage = env.position_on_track/env.track.length
+                percentage = percentage if percentage > 0 else 0
+                objective_idx = int(objectives.shape[0]*percentage)
+                objective = objectives[objective_idx]
+                action = agent.select_action(np.concatenate([state, objective]),
+                                             evaluate=True)
 
                 next_state, reward, done, robot_pos = env.step(action)  # Step
                 robot_pos = np.array(list(robot_pos.values()))
