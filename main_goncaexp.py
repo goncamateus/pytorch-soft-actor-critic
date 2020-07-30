@@ -116,7 +116,7 @@ for i_episode in itertools.count(1):
                 updates += 1
 
         next_state, reward, done, robot_pos = env.step(action)  # Step
-        if episode_steps % 10 != 0:
+        if not done:
             reward = 0
         robot_pos = np.array(list(robot_pos.values()))[:-1]
         next_state = np.concatenate([next_state, robot_pos])
@@ -142,6 +142,7 @@ for i_episode in itertools.count(1):
         action_bef = episode[i-1][1]
         reward_bef = episode[i-1][2]
         done_bef = episode[i-1][3]
+        new_reward = 0
         if d2 > d1 and i > 0:
             new_reward = np.exp((-d1/worst_dist))
             memory.push(
@@ -150,6 +151,7 @@ for i_episode in itertools.count(1):
             new_reward = -np.exp((-d1/worst_dist))
             memory.push(
                 state_bef, action_bef, new_reward, state, done_bef, goal)
+        episode_reward += new_reward
 
     if total_numsteps > args.num_steps:
         break

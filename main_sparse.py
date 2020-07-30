@@ -115,8 +115,9 @@ for i_episode in itertools.count(1):
         next_state, reward, done, robot_pos = env.step(action)  # Step
         episode_steps += 1
         total_numsteps += 1
+        if not done:
+            reward = 0
         episode_reward += reward
-
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
         mask = float(not done)
@@ -131,7 +132,7 @@ for i_episode in itertools.count(1):
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
-    if i_episode % 10 == 0 and args.eval is True:
+    if i_episode % 50 == 0 and args.eval is True:
         avg_reward = 0.
         episodes = 3
         for _ in range(episodes):
