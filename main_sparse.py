@@ -58,7 +58,7 @@ args = parser.parse_args()
 # env = gym.make(args.env_name)
 env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
                       max_time=60, power_limit=0.99)
-env_test = LineFollowerEnv(gui=True, sub_steps=10, max_track_err=0.05,
+env_test = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
                            max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
