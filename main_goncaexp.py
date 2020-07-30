@@ -57,7 +57,7 @@ args = parser.parse_args()
 # env = NormalizedActions(gym.make(args.env_name))
 # env = gym.make(args.env_name)
 env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
-                      max_time=10, power_limit=0.99)
+                      max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
 # env.action_space.seed(args.seed)
@@ -66,7 +66,7 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(env.observation_space.shape[0]+5, env.action_space, args)
+agent = SAC(env.observation_space.shape[0]+4, env.action_space, args)
 
 # Tesnorboard
 writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"), args.env_name,
@@ -78,20 +78,19 @@ memory = ReplayGMemory(args.replay_size, args.seed)
 # Training Loop
 total_numsteps = 0
 updates = 0
-
 for i_episode in itertools.count(1):
     episode_reward = 0
     episode_steps = 0
     done = False
     episode = []
     state = env.reset()
-    objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
+    objectives = np.array(list(zip(env.track.x, env.track.y)))
+    objectives = np.array([objectives[i]
+                           for i in range(1, len(objectives), 20)])
     robot_pos = env._get_info()
-    robot_pos = np.array(list(robot_pos.values()))
+    robot_pos = np.array(list(robot_pos.values()))[:-1]
     state = np.concatenate([state, robot_pos])
-    worst_goal = np.array([[np.min(env.track.x), np.min(env.track.y)],
-                           [np.max(env.track.x), np.max(env.track.y)]])
-    worst_dist = np.linalg.norm(worst_goal[0]-worst_goal[1])
+    worst_dist = 5
     while not done:
         percentage = env.position_on_track/env.track.length
         percentage = percentage if percentage > 0 else 0
@@ -117,9 +116,9 @@ for i_episode in itertools.count(1):
                 updates += 1
 
         next_state, reward, done, robot_pos = env.step(action)  # Step
-        if len(episode) % 49 != 0:
+        if episode_steps % 10 != 0:
             reward = 0
-        robot_pos = np.array(list(robot_pos.values()))
+        robot_pos = np.array(list(robot_pos.values()))[:-1]
         next_state = np.concatenate([next_state, robot_pos])
         episode_steps += 1
         total_numsteps += 1
@@ -135,19 +134,22 @@ for i_episode in itertools.count(1):
         state = next_state
 
     for i, (state, action, reward, done, next_state, goal) in enumerate(episode):
-        g1 = state[-3:-1]
-        g2 = next_state[-3:-1]
-        d1 = np.linalg.norm(g1-goal)
-        d2 = np.linalg.norm(g2-goal)
+        g1 = state[-2:]
+        g2 = next_state[-2:]
+        d1 = np.linalg.norm(g1-goal)*100
+        d2 = np.linalg.norm(g2-goal)*100
+        state_bef = episode[i-1][0]
+        action_bef = episode[i-1][1]
+        reward_bef = episode[i-1][2]
+        done_bef = episode[i-1][3]
         if d2 > d1 and i > 0:
-            state_bef = episode[i-1][0]
-            action_bef = episode[i-1][1]
-            reward_bef = episode[i-1][2]
-            done_bef = episode[i-1][3]
-            new_reward = 1 - d1/worst_dist
-            episode_reward += new_reward
+            new_reward = np.exp((-d1/worst_dist))
             memory.push(
                 state_bef, action_bef, new_reward, state, done_bef, g1)
+        elif d1 > d2 and i > 0:
+            new_reward = -np.exp((-d1/worst_dist))
+            memory.push(
+                state_bef, action_bef, new_reward, state, done_bef, goal)
 
     if total_numsteps > args.num_steps:
         break
@@ -156,14 +158,14 @@ for i_episode in itertools.count(1):
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
-    if i_episode % 100 == 0 and args.eval is True:
+    if i_episode % 50 == 0 and args.eval is True:
         avg_reward = 0.
-        episodes = 10
+        episodes = 3
         for _ in range(episodes):
             state = env.reset()
             objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
             robot_pos = env._get_info()
-            robot_pos = np.array(list(robot_pos.values()))
+            robot_pos = np.array(list(robot_pos.values()))[:-1]
             state = np.concatenate([state, robot_pos])
             episode_reward = 0
             done = False
@@ -177,7 +179,7 @@ for i_episode in itertools.count(1):
                                              evaluate=True)
 
                 next_state, reward, done, robot_pos = env.step(action)  # Step
-                robot_pos = np.array(list(robot_pos.values()))
+                robot_pos = np.array(list(robot_pos.values()))[:-1]
                 next_state = np.concatenate([next_state, robot_pos])
                 episode_reward += reward
 

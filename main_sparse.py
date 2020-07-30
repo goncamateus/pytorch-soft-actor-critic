@@ -13,7 +13,7 @@ from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 
-wandb.init(name="LineFollower-normal-home", project="Cadeira-RL")
+wandb.init(name="LineFollower-sparse", project="Cadeira-RL")
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
@@ -131,7 +131,7 @@ for i_episode in itertools.count(1):
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
-    if i_episode % 100 == 0 and args.eval is True:
+    if i_episode % 10 == 0 and args.eval is True:
         avg_reward = 0.
         episodes = 3
         for _ in range(episodes):
