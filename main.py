@@ -133,7 +133,7 @@ for i_episode in itertools.count(1):
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
-    if i_episode % 100 == 0 and args.eval is True:
+    if i_episode % 50 == 0 and args.eval is True:
         avg_reward = 0.
         episodes = 3
         for _ in range(episodes):
