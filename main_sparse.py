@@ -25,7 +25,7 @@ parser.add_argument('--eval', type=bool, default=True,
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor for reward (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.005, metavar='G',
-                    help='target smoothing coefficient(τ) (default: 0.005)')
+                    help='target smoothing coefficient(t) (default: 0.005)')
 parser.add_argument('--lr', type=float, default=0.0003, metavar='G',
                     help='learning rate (default: 0.0003)')
 parser.add_argument('--alpha', type=float, default=0.2, metavar='G',
@@ -60,7 +60,6 @@ env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
                       max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
-env_test.seed(args.seed)
 
 # env.action_space.seed(args.seed)
 
@@ -138,14 +137,14 @@ for i_episode in itertools.count(1):
         avg_reward = 0.
         episodes = 3
         for _ in range(episodes):
-            state = env_test.reset(do_rand=False)
+            state = env.reset(do_rand=False)
             episode_reward = 0
             done = False
             while not done:
-                # env_test.render(mode='human')
+                # env.render(mode='human')
                 action = agent.select_action(state, evaluate=True)
 
-                next_state, reward, done, robot_pos = env_test.step(action)
+                next_state, reward, done, robot_pos = env.step(action)
                 episode_reward += reward
 
                 state = next_state
