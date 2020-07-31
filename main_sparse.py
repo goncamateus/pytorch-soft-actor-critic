@@ -58,8 +58,6 @@ args = parser.parse_args()
 # env = gym.make(args.env_name)
 env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
                       max_time=60, power_limit=0.99)
-env_test = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
-                           max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
 env_test.seed(args.seed)
@@ -85,13 +83,15 @@ memory = ReplayMemory(args.replay_size, args.seed)
 # Training Loop
 total_numsteps = 0
 updates = 0
-
+did_it = False
 for i_episode in itertools.count(1):
     episode_reward = 0
     episode_steps = 0
     done = False
     episode = []
-    state = env.reset()
+    state = env.reset(do_rand=did_it)
+    if did_it:
+        did_it = False
     while not done:
         if args.start_steps > total_numsteps:
             action = env.action_space.sample()  # Sample random action
@@ -117,6 +117,8 @@ for i_episode in itertools.count(1):
         total_numsteps += 1
         if not done:
             reward = 0
+        if env.track.done:
+            did_it = True
         episode_reward += reward
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
@@ -136,7 +138,7 @@ for i_episode in itertools.count(1):
         avg_reward = 0.
         episodes = 3
         for _ in range(episodes):
-            state = env_test.reset()
+            state = env_test.reset(do_rand=False)
             episode_reward = 0
             done = False
             while not done:

@@ -56,7 +56,7 @@ args = parser.parse_args()
 # Environment
 # env = NormalizedActions(gym.make(args.env_name))
 # env = gym.make(args.env_name)
-env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
+env = LineFollowerEnv(gui=True, sub_steps=10, max_track_err=0.05,
                       max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
@@ -78,19 +78,22 @@ memory = ReplayGMemory(args.replay_size, args.seed)
 # Training Loop
 total_numsteps = 0
 updates = 0
+did_it = False
 for i_episode in itertools.count(1):
     episode_reward = 0
     episode_steps = 0
     done = False
     episode = []
-    state = env.reset()
+    state = env.reset(do_rand=did_it)
+    if did_it:
+        did_it = False
     objectives = np.array(list(zip(env.track.x, env.track.y)))
     objectives = np.array([objectives[i]
-                           for i in range(1, len(objectives), 20)])
+                           for i in range(1, len(objectives), 50)])
     robot_pos = env._get_info()
     robot_pos = np.array(list(robot_pos.values()))[:-1]
     state = np.concatenate([state, robot_pos])
-    worst_dist = 5
+    worst_dist = np.linalg.norm(objectives[0]-objectives[1])*100
     while not done:
         percentage = env.position_on_track/env.track.length
         percentage = percentage if percentage > 0 else 0
@@ -118,6 +121,8 @@ for i_episode in itertools.count(1):
         next_state, reward, done, robot_pos = env.step(action)  # Step
         if not done:
             reward = 0
+        if env.track.done:
+            did_it = True
         robot_pos = np.array(list(robot_pos.values()))[:-1]
         next_state = np.concatenate([next_state, robot_pos])
         episode_steps += 1
@@ -164,7 +169,7 @@ for i_episode in itertools.count(1):
         avg_reward = 0.
         episodes = 3
         for _ in range(episodes):
-            state = env.reset()
+            state = env.reset(do_rand=False)
             objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
             robot_pos = env._get_info()
             robot_pos = np.array(list(robot_pos.values()))[:-1]
