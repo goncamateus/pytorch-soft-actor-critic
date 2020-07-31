@@ -13,8 +13,6 @@ from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 
-wandb.init(name="LineFollower-test", project="Cadeira-RL")
-
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
                     help='Mujoco Gym environment (default: LineFollower-v0)')
@@ -63,28 +61,42 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(env_test.observation_space.shape[0], env_test.action_space, args)
-path = 'models/sac_CHANGE_LineFollower-v0_normal'
+# Normal
+# agent = SAC(env_test.observation_space.shape[0], env_test.action_space, args)
+# With objective
+agent = SAC(env_test.observation_space.shape[0]+4, env_test.action_space, args)
+path = 'models/sac_CHANGE_LineFollower-v0_goncaexp'
 agent.load_model(path.replace('CHANGE', 'actor'),
                  path.replace('CHANGE', 'critic'))
 
 episodes = 100
 avg_reward = 0.
 for _ in range(episodes):
-    state = env_test.reset()
+    state = env.reset(do_rand=False)
+    objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
+    robot_pos = env._get_info()
+    robot_pos = np.array(list(robot_pos.values()))[:-1]
+    state = np.concatenate([state, robot_pos])
     episode_reward = 0
     done = False
     while not done:
-        action = agent.select_action(state, evaluate=True)
+        # env.render(mode='human')
+        percentage = env.position_on_track/env.track.length
+        percentage = percentage if percentage > 0 else 0
+        objective_idx = int(objectives.shape[0]*percentage)
+        objective = objectives[objective_idx]
+        action = agent.select_action(np.concatenate([state, objective]),
+                                        evaluate=True)
 
-        next_state, reward, done, robot_pos = env_test.step(action)
+        next_state, reward, done, robot_pos = env.step(action)  # Step
+        robot_pos = np.array(list(robot_pos.values()))[:-1]
+        next_state = np.concatenate([next_state, robot_pos])
         episode_reward += reward
 
         state = next_state
     avg_reward += episode_reward
 avg_reward /= episodes
 
-wandb.log({'reward_test': avg_reward})
 print("----------------------------------------")
 print("Test Episodes: {}, Avg. Reward: {}".format(
     episodes, round(avg_reward, 2)))

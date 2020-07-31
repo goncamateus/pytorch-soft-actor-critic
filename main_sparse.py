@@ -55,9 +55,9 @@ args = parser.parse_args()
 
 # Environment
 # env = NormalizedActions(gym.make(args.env_name))
-# env = gym.make(args.env_name)
-env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
-                      max_time=60, power_limit=0.99)
+env = gym.make(args.env_name)
+# env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
+#                       max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
 
@@ -88,7 +88,7 @@ for i_episode in itertools.count(1):
     episode_steps = 0
     done = False
     episode = []
-    state = env.reset(do_rand=did_it)
+    state = env.reset()
     if did_it:
         did_it = False
     while not done:
@@ -133,11 +133,11 @@ for i_episode in itertools.count(1):
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
-    if i_episode % 50 == 0 and args.eval is True:
+    if i_episode % 100 == 0 and args.eval is True:
         avg_reward = 0.
         episodes = 3
         for _ in range(episodes):
-            state = env.reset(do_rand=False)
+            state = env.reset()
             episode_reward = 0
             done = False
             while not done:
@@ -157,7 +157,6 @@ for i_episode in itertools.count(1):
         print("Test Episodes: {}, Avg. Reward: {}".format(
             episodes, round(avg_reward, 2)))
         print("----------------------------------------")
-        agent.save_model(env_name=args.env_name, suffix=datetime.datetime.now(
-        ).strftime("%Y-%m-%d_%H-%M-%S"))
+        agent.save_model(env_name=args.env_name, suffix='sparse')
 
 env.close()
