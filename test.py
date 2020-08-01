@@ -5,13 +5,14 @@ import itertools
 import gym
 import numpy as np
 import torch
-import wandb
 from torch.utils.tensorboard import SummaryWriter
 
 import gym_line_follower
+import wandb
 from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
+from utils import get_goal, get_her_goal
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
@@ -52,19 +53,19 @@ parser.add_argument('--cuda', action="store_true",
 args = parser.parse_args()
 
 # Environment
-env_test = LineFollowerEnv(gui=True, sub_steps=10, max_track_err=0.05,
+env = LineFollowerEnv(gui=True, sub_steps=10, max_track_err=0.05,
                            max_time=60, power_limit=0.99)
 
-env_test.seed(args.seed)
+env.seed(args.seed)
 
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
 # Normal
-# agent = SAC(env_test.observation_space.shape[0], env_test.action_space, args)
+# agent = SAC(env.observation_space.shape[0], env.action_space, args)
 # With objective
-agent = SAC(env_test.observation_space.shape[0]+4, env_test.action_space, args)
+agent = SAC(env.observation_space.shape[0]+3, env.action_space, args)
 path = 'models/sac_CHANGE_LineFollower-v0_goncaexp'
 agent.load_model(path.replace('CHANGE', 'actor'),
                  path.replace('CHANGE', 'critic'))
@@ -72,25 +73,13 @@ agent.load_model(path.replace('CHANGE', 'actor'),
 episodes = 100
 avg_reward = 0.
 for _ in range(episodes):
-    state = env.reset(do_rand=False)
-    objectives = np.array(list(zip(env.track.x, env.track.y))[1:])
-    robot_pos = env._get_info()
-    robot_pos = np.array(list(robot_pos.values()))[:-1]
-    state = np.concatenate([state, robot_pos])
+    state = env.reset()
     episode_reward = 0
     done = False
     while not done:
-        # env.render(mode='human')
-        percentage = env.position_on_track/env.track.length
-        percentage = percentage if percentage > 0 else 0
-        objective_idx = int(objectives.shape[0]*percentage)
-        objective = objectives[objective_idx]
-        action = agent.select_action(np.concatenate([state, objective]),
-                                        evaluate=True)
-
-        next_state, reward, done, robot_pos = env.step(action)  # Step
-        robot_pos = np.array(list(robot_pos.values()))[:-1]
-        next_state = np.concatenate([next_state, robot_pos])
+        action = agent.select_action(np.concatenate(
+            [state, get_goal(env)]), evaluate=True)
+        next_state, reward, done, robot_pos = env.step(action)
         episode_reward += reward
 
         state = next_state

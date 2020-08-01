@@ -82,6 +82,7 @@ for i_episode in itertools.count(1):
     done = False
     episode = []
     state = env.reset()
+    checkpoint_reward = 1000. / env.track.nb_checkpoints
     worst_goals = np.array([[0, 0, 0], [env.track.checkpoints[-1],
                                         360, env.max_track_err]])
     worst_dist = np.linalg.norm(worst_goals[0] - worst_goals[1])
@@ -136,14 +137,14 @@ for i_episode in itertools.count(1):
                 episode[t]
             except:
                 continue
+            checkpoints_reached = env.track.update_progress(her_goal[0])
+            reward = checkpoints_reached * \
+                checkpoint_reward * (1.0 - her_goal[-1]) ** 2
             new_goal = episode[t][-1]
-            dist = np.linalg.norm(next_her_goal-new_goal)*100
-            if dist < 1:
-                reward = 0
-            else:
-                reward = -1
+            dist = np.linalg.norm(next_her_goal-new_goal)
+            if dist != 0:
+                reward += -100
 
-            episode_reward += reward
             memory.push(state, action, reward, next_state, done, new_goal)
 
     if total_numsteps > args.num_steps:

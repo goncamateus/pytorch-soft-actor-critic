@@ -5,6 +5,7 @@ import itertools
 import gym
 import numpy as np
 import torch
+from torch.utils.tensorboard import SummaryWriter
 
 import gym_line_follower
 import wandb
@@ -13,7 +14,7 @@ from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 from utils import get_goal, get_her_goal
 
-wandb.init(name="LineFollower-GoncaExp", project="Cadeira-RL")
+wandb.init(name="LineFollower-HERLoaded", project="Cadeira-RL")
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
@@ -56,6 +57,8 @@ args = parser.parse_args()
 # Environment
 # env = NormalizedActions(gym.make(args.env_name))
 env = gym.make(args.env_name)
+# env = LineFollowerEnv(gui=False, sub_steps=10, max_track_err=0.05,
+#                       max_time=60, power_limit=0.99)
 
 env.seed(args.seed)
 # env.action_space.seed(args.seed)
@@ -79,6 +82,7 @@ for i_episode in itertools.count(1):
     done = False
     episode = []
     state = env.reset()
+    checkpoint_reward = 1000. / env.track.nb_checkpoints
     worst_goals = np.array([[0, 0, 0], [env.track.checkpoints[-1],
                                         360, env.max_track_err]])
     worst_dist = np.linalg.norm(worst_goals[0] - worst_goals[1])
@@ -110,39 +114,44 @@ for i_episode in itertools.count(1):
         next_her_goal = get_her_goal(env)
         if not done:
             reward = 0
-        episode_reward += reward
         if env.track.done:
             did_it = True
         episode_steps += 1
         total_numsteps += 1
+        episode_reward += reward
 
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
         mask = float(not done)
         # Append transition to memory
-        # memory.push(state, action, reward, next_state, mask, goal)
+        memory.push(state, action, reward, next_state, mask, goal)
         episode.append((state, action, reward, mask,
                         next_state, goal, her_goal, next_her_goal))
 
         state = next_state
+    new_goals = 5
     for i, (state, action, reward, done,
             next_state, goal, her_goal, next_her_goal) in enumerate(episode):
-        d1 = np.linalg.norm(her_goal-goal)
-        d2 = np.linalg.norm(next_her_goal-goal)
-        state_bef = episode[i-1][0]
-        action_bef = episode[i-1][1]
-        reward_bef = episode[i-1][2]
-        done_bef = episode[i-1][3]
-        new_reward = 0
-        if d2 > d1 and i > 0:
-            new_reward = np.exp((-d1/worst_dist))
-            memory.push(
-                state_bef, action_bef, new_reward, state, done_bef, her_goal)
-        elif d1 > d2 and i > 0:
-            new_reward = -np.exp((-d1/worst_dist))
-            memory.push(
-                state_bef, action_bef, new_reward, state, done_bef, goal)
-        episode_reward += new_reward
+        for t in np.random.choice(len(episode), new_goals):
+            try:
+                episode[t]
+            except:
+                continue
+            new_goal = episode[t][-1]
+            d1 = np.linalg.norm(her_goal-new_goal)
+            d2 = np.linalg.norm(next_her_goal-new_goal)
+
+            if d1 < d2:
+                new_goal = her_goal
+                reward = -100
+            else:
+                new_goal = next_her_goal
+                checkpoints_reached = env.track.update_progress(new_goal[0])
+                reward = checkpoints_reached * \
+                    checkpoint_reward * (1.0 - new_goal[-1]) ** 2
+
+            memory.push(state, action, reward, next_state, done, new_goal)
+
     if total_numsteps > args.num_steps:
         break
 
@@ -173,6 +182,6 @@ for i_episode in itertools.count(1):
         print("Test Episodes: {}, Avg. Reward: {}".format(
             episodes, round(avg_reward, 2)))
         print("----------------------------------------")
-        agent.save_model(env_name=args.env_name, suffix='goncaexp')
+        agent.save_model(env_name=args.env_name, suffix='her')
 
 env.close()
