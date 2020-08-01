@@ -142,10 +142,8 @@ for i_episode in itertools.count(1):
             d2 = np.linalg.norm(next_her_goal-new_goal)
 
             if d1 < d2:
-                new_goal = her_goal
                 reward = -100
             else:
-                new_goal = next_her_goal
                 checkpoints_reached = env.track.update_progress(new_goal[0])
                 reward = checkpoints_reached * \
                     checkpoint_reward * (1.0 - new_goal[-1]) ** 2

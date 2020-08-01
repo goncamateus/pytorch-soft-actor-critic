@@ -127,11 +127,9 @@ for i_episode in itertools.count(1):
             d1 = np.linalg.norm(her_goal-new_goal)
             d2 = np.linalg.norm(next_her_goal-new_goal)
             if d1 < d2:
-                new_goal = her_goal
                 reward = -100
             else:
-                new_goal = next_her_goal
-                reward = 100
+                reward = 200
             memory.push(state, action, reward, next_state, done, new_goal)
 
     if total_numsteps > args.num_steps:
