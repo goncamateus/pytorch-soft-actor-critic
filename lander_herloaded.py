@@ -60,7 +60,7 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(env.observation_space.shape[0]+2, env.action_space, args)
+agent = SAC(env.observation_space.shape[0]+4, env.action_space, args)
 
 # Memory
 memory = ReplayGMemory(args.replay_size, args.seed)
@@ -69,7 +69,7 @@ memory = ReplayGMemory(args.replay_size, args.seed)
 total_numsteps = 0
 updates = 0
 did_it = False
-goal = np.array([0.45, 0])
+goal = np.array([0, 0, 1, 1])
 for i_episode in itertools.count(1):
     episode_reward = 0
     episode_steps = 0
@@ -97,8 +97,9 @@ for i_episode in itertools.count(1):
                 updates += 1
 
         next_state, reward, done, info = env.step(action)  # Step
-        her_goal = state
-        next_her_goal = next_state
+        her_goal = np.array([state[0], state[1], state[-2], state[-1]])
+        next_her_goal = np.array([next_state[0], next_state[1],
+                                  next_state[-2], next_state[-1]])
         if not done:
             reward = 0
         episode_steps += 1

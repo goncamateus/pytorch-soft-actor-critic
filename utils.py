@@ -37,14 +37,16 @@ def hard_update(target, source):
 
 def get_her_goal(env):
     return np.array([env.position_on_track,
-                     env.bot_angle_deg(),
+                    #  env.bot_angle_deg(),
                      env.get_track_err()[0]])
 
 
 def get_goal(env):
-    chkpt = env.track.checkpoints[env.track.next_checkpoint_idx]
+    chkpt = env.track.checkpoints[-1]
     nearest_point = env.track.nearest_point(env.bot_pos())
     idx = np.where(env.track.x == nearest_point[0])[0][0]
     des_ang = env.track.angle_at_index(idx)
     des_ang = np.degrees(des_ang)
-    return np.array([chkpt, des_ang, 0.0])
+    return np.array([chkpt,
+                    #  des_ang,
+                     0.0])
