@@ -50,8 +50,8 @@ parser.add_argument('--cuda', action="store_true",
                     help='run on CUDA (default: False)')
 args = parser.parse_args()
 
+wandb.init(name=f"{args.env_name}-HER", project="MyExp")
 # Environment
-wandb.init(name=f"{args.env_name}-HERLoaded", project="MyExp")
 env = gym.make(args.env_name)
 
 env.seed(args.seed)
@@ -69,7 +69,7 @@ memory = ReplayGMemory(args.replay_size, args.seed)
 total_numsteps = 0
 updates = 0
 did_it = False
-goal = np.array([0.45, 0])
+goal = np.array([0.45 , 0])
 for i_episode in itertools.count(1):
     episode_reward = 0
     episode_steps = 0
@@ -77,6 +77,7 @@ for i_episode in itertools.count(1):
     episode = []
     state = env.reset()
     while not done:
+        # env.render()
         if args.start_steps > total_numsteps:
             action = env.action_space.sample()  # Sample random action
         else:
@@ -123,12 +124,10 @@ for i_episode in itertools.count(1):
             except:
                 continue
             new_goal = episode[t][-1]
-            d1 = np.linalg.norm(her_goal-new_goal)
-            d2 = np.linalg.norm(next_her_goal-new_goal)
-            if d1 < d2:
-                reward = -100
+            if np.array_equal(new_goal, next_her_goal):
+                reward = 100
             else:
-                reward = 200
+                reward = 0
             memory.push(state, action, reward, next_state, done, new_goal)
 
     if total_numsteps > args.num_steps:
@@ -162,6 +161,6 @@ for i_episode in itertools.count(1):
         print("Test Episodes: {}, Avg. Reward: {}".format(
             episodes, round(avg_reward, 2)))
         print("----------------------------------------")
-        agent.save_model(env_name=args.env_name, suffix='herloaded')
+        agent.save_model(env_name=args.env_name, suffix='her')
 
 env.close()

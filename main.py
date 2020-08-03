@@ -8,12 +8,11 @@ import torch
 import wandb
 from torch.utils.tensorboard import SummaryWriter
 
-import gym_line_follower
-from gym_line_follower.envs import LineFollowerEnv
+# import gym_line_follower
+# from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 
-wandb.init(name="LineFollower-normal-home", project="Cadeira-RL")
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
 parser.add_argument('--env-name', default="LineFollower-v0",
@@ -53,6 +52,7 @@ parser.add_argument('--cuda', action="store_true",
                     help='run on CUDA (default: False)')
 args = parser.parse_args()
 
+wandb.init(name=f"{args.env_name}-normal", project="Cadeira-RL")
 # Environment
 # env = NormalizedActions(gym.make(args.env_name))
 env = gym.make(args.env_name)
@@ -71,10 +71,6 @@ agent = SAC(env.observation_space.shape[0], env.action_space, args)
 # path = 'models/sac_CHANGE_LineFollower-v0_normal'
 # agent.load_model(path.replace('CHANGE', 'actor'),
 #                  path.replace('CHANGE', 'critic'))
-
-# Tesnorboard
-writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"), args.env_name,
-                                                     args.policy, "autotune" if args.automatic_entropy_tuning else ""))
 
 # Memory
 memory = ReplayMemory(args.replay_size, args.seed)
@@ -116,8 +112,6 @@ for i_episode in itertools.count(1):
         episode_steps += 1
         total_numsteps += 1
         episode_reward += reward
-        if env.track.done:
-            did_it = True
 
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
@@ -141,7 +135,7 @@ for i_episode in itertools.count(1):
             episode_reward = 0
             done = False
             while not done:
-                # env.render(mode='human')
+                env.render()
                 action = agent.select_action(state, evaluate=True)
 
                 next_state, reward, done, robot_pos = env.step(action)
