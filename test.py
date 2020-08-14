@@ -69,7 +69,7 @@ np.random.seed(args.seed)
 # With objective
 # agent = SAC(env.observation_space.shape[0]+3, env.action_space, args)
 agent = SAC(env.observation_space.shape[0]+4, env.action_space, args)
-path = 'models/sac_CHANGE_LunarLanderContinuous-v2_her'
+path = 'models/sac_CHANGE_LunarLanderContinuous-v2_herloaded'
 agent.load_model(path.replace('CHANGE', 'actor'),
                  path.replace('CHANGE', 'critic'))
 
