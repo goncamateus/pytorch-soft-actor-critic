@@ -8,7 +8,7 @@ import torch
 import wandb
 from torch.utils.tensorboard import SummaryWriter
 
-# import gym_line_follower
+import gym_line_follower
 # from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
@@ -135,7 +135,7 @@ for i_episode in itertools.count(1):
             episode_reward = 0
             done = False
             while not done:
-                env.render()
+                env.render(mode='human')
                 action = agent.select_action(state, evaluate=True)
 
                 next_state, reward, done, robot_pos = env.step(action)
