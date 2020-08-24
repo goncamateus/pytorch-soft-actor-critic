@@ -38,7 +38,7 @@ parser.add_argument('--seed', type=int, default=123456, metavar='N',
                     help='random seed (default: 123456)')
 parser.add_argument('--batch_size', type=int, default=256, metavar='N',
                     help='batch size (default: 256)')
-parser.add_argument('--num_steps', type=int, default=1000001, metavar='N',
+parser.add_argument('--num_steps', type=int, default=1500001, metavar='N',
                     help='maximum number of steps (default: 1000000)')
 parser.add_argument('--hidden_size', type=int, default=256, metavar='N',
                     help='hidden size (default: 256)')
@@ -54,7 +54,7 @@ parser.add_argument('--cuda', action="store_true",
                     help='run on CUDA (default: False)')
 args = parser.parse_args()
 
-wandb.init(name=f"{args.env_name}-DHER", project="MyExp")
+wandb.init(name=f"{args.env_name}-DHER", project="Cadeira-RL")
 # Environment
 env = gym.make(args.env_name)
 
@@ -192,7 +192,7 @@ for i_episode in itertools.count(1):
             episode_reward = 0
             done = False
             while not done:
-                env.render()
+                # env.render()
                 action = agent.select_action(np.concatenate(
                     [state, goal]), evaluate=True)
                 next_state, reward, done, robot_pos = env.step(action)
