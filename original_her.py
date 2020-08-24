@@ -13,8 +13,8 @@ from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
-parser.add_argument('--env-name', default='FetchReach-v1',
-                    help='Mujoco Gym environment (default: FetchReach-v1)')
+parser.add_argument('--env-name', default='LineFollowerGoal-v0',
+                    help='Mujoco Gym environment (default: LineFollowerGoal-v0)')
 parser.add_argument('--policy', default="Gaussian",
                     help='Policy Type: Gaussian | Deterministic (default: Gaussian)')
 parser.add_argument('--eval', type=bool, default=True,

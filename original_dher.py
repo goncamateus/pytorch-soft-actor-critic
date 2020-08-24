@@ -17,8 +17,8 @@ from utils import get_goal, get_her_goal
 
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
-parser.add_argument('--env-name', default='FetchReach-v1',
-                    help='Mujoco Gym environment (default: FetchReach-v1)')
+parser.add_argument('--env-name', default='LineFollowerGoal-v0',
+                    help='Mujoco Gym environment (default: LineFollowerGoal-v0)')
 parser.add_argument('--policy', default="Gaussian",
                     help='Policy Type: Gaussian | Deterministic (default: Gaussian)')
 parser.add_argument('--eval', type=bool, default=True,
@@ -133,7 +133,7 @@ for i_episode in itertools.count(1):
         state = next_state
         her_goal = next_her_goal
     
-    if reward < -10:
+    if reward < 0:
         failed_episodes.append(episode)
 
     if len(failed_episodes) > 1:
@@ -160,11 +160,11 @@ for i_episode in itertools.count(1):
                     bef_new_goal = Ej_desired_goals[t]
                     new_goal = Ej_desired_goals[t+1]
                     # O rework do reward eh no episodio Ei que tem tamanho p=len(Ei) e so pode ir ate o tamanho  m=min(len(Ei),len(Ej))
-                    state, action, _, next_state, done, _, _, next_achieved_goal = Ei[p - m + t]
-                    # O estado S[p-m+t] eh concatenado com o g't
-                    state = np.concatenate((state, bef_new_goal))
-                    # O estado S[p-m+t+1] eh concatenado com o g'(t+1)
-                    next_state = np.concatenate((next_state, new_goal))
+                    state, action, _, done, next_state, _, _, next_achieved_goal = Ei[p - m + t]
+                    # # O estado S[p-m+t] eh concatenado com o g't
+                    # state = np.concatenate((state, bef_new_goal))
+                    # # O estado S[p-m+t+1] eh concatenado com o g'(t+1)
+                    # next_state = np.concatenate((next_state, new_goal))
 
                     # Linha 19
                     # Reward eh calculado com o g'(t+1)
@@ -192,6 +192,7 @@ for i_episode in itertools.count(1):
             episode_reward = 0
             done = False
             while not done:
+                env.render()
                 action = agent.select_action(np.concatenate(
                     [state, goal]), evaluate=True)
                 next_state, reward, done, robot_pos = env.step(action)

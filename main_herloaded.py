@@ -1,3 +1,4 @@
+import ipdb
 import argparse
 import datetime
 import itertools
@@ -14,11 +15,10 @@ from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 from utils import get_goal, get_her_goal
 
-wandb.init(name="LineFollower-HERLoaded", project="Cadeira-RL")
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
-parser.add_argument('--env-name', default="LineFollower-v0",
-                    help='Mujoco Gym environment (default: LineFollower-v0)')
+parser.add_argument('--env-name', default='LineFollowerGoal-v0',
+                    help='Mujoco Gym environment (default: LineFollowerGoal-v0)')
 parser.add_argument('--policy', default="Gaussian",
                     help='Policy Type: Gaussian | Deterministic (default: Gaussian)')
 parser.add_argument('--eval', type=bool, default=True,
@@ -54,36 +54,47 @@ parser.add_argument('--cuda', action="store_true",
                     help='run on CUDA (default: False)')
 args = parser.parse_args()
 
+wandb.init(name=f"{args.env_name}-DHER", project="MyExp")
 # Environment
-# env = NormalizedActions(gym.make(args.env_name))
-# env = gym.make(args.env_name)
-env = LineFollowerEnv(gui=False)
+env = gym.make(args.env_name)
 
 env.seed(args.seed)
-# env.action_space.seed(args.seed)
 
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
-
 # Agent
-agent = SAC(env.observation_space.shape[0]+2, env.action_space, args)
+if args.env_name.startswith('Fetch'):
+    env_space = env.observation_space.spaces
+    agent = SAC(
+        env_space['observation'].shape[0]+env_space['desired_goal'].shape[0],
+        env.action_space, args)
+else:
+    agent = SAC(
+        env.observation_space.shape[0]+2,
+        env.action_space, args)
 
 # Memory
 memory = ReplayGMemory(args.replay_size, args.seed)
+achieved_hash = dict()
+desired_hash = dict()
+failed_episodes = list()
 
 # Training Loop
 total_numsteps = 0
 updates = 0
+did_it = False
 for i_episode in itertools.count(1):
     episode_reward = 0
     episode_steps = 0
     done = False
     episode = []
     state = env.reset()
-    checkpoint_reward = 1000. / env.track.nb_checkpoints
+    goal = state['desired_goal']
+    her_goal = state['achieved_goal']
+    state = state['observation']
+    if did_it:
+        did_it = False
     while not done:
-        goal = get_goal(env)
-        her_goal = get_her_goal(env)
         if args.start_steps > total_numsteps:
             action = env.action_space.sample()  # Sample random action
         else:
@@ -96,17 +107,17 @@ for i_episode in itertools.count(1):
                 critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(
                     memory, args.batch_size, updates)
 
-                wandb.log({"train/critic_1": critic_1_loss,
-                           "train/critic_2": critic_2_loss,
-                           "train/policy": policy_loss,
-                           "train/entropy_loss": ent_loss,
-                           "train/temp_alpha": alpha})
+                wandb.log({"critic_1": critic_1_loss,
+                           "critic_2": critic_2_loss,
+                           "policy": policy_loss,
+                           "entropy_loss": ent_loss,
+                           "temp_alpha": alpha})
                 updates += 1
 
         next_state, reward, done, robot_pos = env.step(action)  # Step
-        next_her_goal = get_her_goal(env)
-        if not done:
-            reward = 0
+        next_her_goal = next_state['achieved_goal']
+        next_state = next_state['observation']
+
         episode_steps += 1
         total_numsteps += 1
         episode_reward += reward
@@ -135,36 +146,42 @@ for i_episode in itertools.count(1):
             if d1 < d2:
                 reward = -100
             else:
-                # checkpoints_reached = env.track.update_progress(new_goal[0])
-                reward = 500
+                reward = 100
 
             memory.push(state, action, reward, next_state, done, new_goal)
 
     if total_numsteps > args.num_steps:
         break
 
-    wandb.log({'rew/reward_train': episode_reward})
+    wandb.log({'reward_train': episode_reward})
     print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(
         i_episode, total_numsteps, episode_steps, round(episode_reward, 2)))
 
     if i_episode % 100 == 0 and args.eval is True:
         avg_reward = 0.
-        episodes = 10
+        episodes = 3
         for _ in range(episodes):
             state = env.reset()
+            goal = state['desired_goal']
+            her_goal = state['achieved_goal']
+            state = state['observation']
             episode_reward = 0
             done = False
             while not done:
+                env.render()
                 action = agent.select_action(np.concatenate(
-                    [state, get_goal(env)]), evaluate=True)
+                    [state, goal]), evaluate=True)
                 next_state, reward, done, robot_pos = env.step(action)
+                next_her_goal = next_state['achieved_goal']
+                next_state = next_state['observation']
                 episode_reward += reward
 
                 state = next_state
+                her_goal = next_her_goal
             avg_reward += episode_reward
         avg_reward /= episodes
 
-        wandb.log({'rew/reward_test': avg_reward})
+        wandb.log({'reward_test': avg_reward})
 
         print("----------------------------------------")
         print("Test Episodes: {}, Avg. Reward: {}".format(
