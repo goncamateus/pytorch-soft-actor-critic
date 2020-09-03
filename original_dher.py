@@ -72,6 +72,9 @@ else:
     agent = SAC(
         env.observation_space.shape[0]+2,
         env.action_space, args)
+    # path = 'models/sac_CHANGE_LineFollowerGoal-v0_dher'
+    # agent.load_model(path.replace('CHANGE', 'actor'),
+    #                  path.replace('CHANGE', 'critic'))
 
 # Memory
 memory = ReplayGMemory(args.replay_size, args.seed)
@@ -82,8 +85,7 @@ failed_episodes = list()
 # Training Loop
 total_numsteps = 0
 updates = 0
-did_it = False
-for i_episode in itertools.count(1):
+for i_episode in range(500):
     episode_reward = 0
     episode_steps = 0
     done = False
@@ -92,8 +94,6 @@ for i_episode in itertools.count(1):
     goal = state['desired_goal']
     her_goal = state['achieved_goal']
     state = state['observation']
-    if did_it:
-        did_it = False
     while not done:
         if args.start_steps > total_numsteps:
             action = env.action_space.sample()  # Sample random action
@@ -211,6 +211,6 @@ for i_episode in itertools.count(1):
         print("Test Episodes: {}, Avg. Reward: {}".format(
             episodes, round(avg_reward, 2)))
         print("----------------------------------------")
-        agent.save_model(env_name=args.env_name, suffix='her')
+        agent.save_model(env_name=args.env_name, suffix='dher')
 
 env.close()

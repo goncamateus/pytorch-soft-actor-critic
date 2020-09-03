@@ -7,9 +7,9 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-# import gym_line_follower
+import gym_line_follower
 import wandb
-# from gym_line_follower.envs import LineFollowerEnv
+from gym_line_follower.envs import LineFollowerEnv, LineFollowerGoalEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 from utils import get_goal, get_her_goal
@@ -53,11 +53,8 @@ parser.add_argument('--cuda', action="store_true",
 args = parser.parse_args()
 
 # Environment
-# env = LineFollowerEnv(gui=True, sub_steps=10, max_track_err=0.05,
-#                            max_time=60, power_limit=0.99)
-env = gym.make("LunarLanderContinuous-v2")
-
-
+# env = gym.make(args.env_name)
+env = LineFollowerGoalEnv(gui=True)
 env.seed(args.seed)
 
 torch.manual_seed(args.seed)
@@ -65,26 +62,31 @@ np.random.seed(args.seed)
 
 # Agent
 # Normal
-# agent = SAC(env.observation_space.shape[0], env.action_space, args)
+agent = SAC(env.observation_space.shape[0], env.action_space, args)
 # With objective
-# agent = SAC(env.observation_space.shape[0]+3, env.action_space, args)
-agent = SAC(env.observation_space.shape[0]+4, env.action_space, args)
-path = 'models/sac_CHANGE_LunarLanderContinuous-v2_herloaded'
-agent.load_model(path.replace('CHANGE', 'actor'),
-                 path.replace('CHANGE', 'critic'))
+# agent = SAC(env.observation_space.shape[0]+2, env.action_space, args)
+# path = 'models/sac_CHANGE_LineFollowerGoal-v0_dher'
+# agent.load_model(path.replace('CHANGE', 'actor'),
+#                  path.replace('CHANGE', 'critic'))
 
 episodes = 100
 avg_reward = 0.
-goal = np.array([0, 0, 1, 1])
 for _ in range(episodes):
     state = env.reset()
+    # with objective
+    # goal = state['desired_goal']
+    # her_goal = state['achieved_goal']
+    # state = state['observation']
     episode_reward = 0
     done = False
     while not done:
-        env.render()
-        action = agent.select_action(np.concatenate(
-            [state, goal]), evaluate=True)
+        # with objective
+        # action = agent.select_action(state, evaluate=True)
+        action = agent.select_action(np.concatenate([state, goal]), evaluate=True)
         next_state, reward, done, robot_pos = env.step(action)
+        # with objective
+        # next_her_goal = next_state['achieved_goal']
+        # next_state = next_state['observation']
         episode_reward += reward
 
         state = next_state

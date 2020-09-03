@@ -80,7 +80,7 @@ total_numsteps = 0
 updates = 0
 
 did_it = False
-for i_episode in itertools.count(1):
+for i_episode in range(500):
     episode_reward = 0
     episode_steps = 0
     done = False
