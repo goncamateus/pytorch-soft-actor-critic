@@ -53,7 +53,7 @@ parser.add_argument('--cuda', action="store_true",
 args = parser.parse_args()
 
 # Environment
-# env = gym.make(args.env_name)
+# env = gym.make(args.env_name, gui=True)
 env = LineFollowerGoalEnv(gui=True)
 env.seed(args.seed)
 
@@ -62,31 +62,32 @@ np.random.seed(args.seed)
 
 # Agent
 # Normal
-agent = SAC(env.observation_space.shape[0], env.action_space, args)
+# agent = SAC(env.observation_space.shape[0], env.action_space, args)
 # With objective
-# agent = SAC(env.observation_space.shape[0]+2, env.action_space, args)
-# path = 'models/sac_CHANGE_LineFollowerGoal-v0_dher'
-# agent.load_model(path.replace('CHANGE', 'actor'),
-#                  path.replace('CHANGE', 'critic'))
+agent = SAC(env.observation_space.shape[0]+2, env.action_space, args)
+
+path = 'models/sac_CHANGE_LineFollowerGoal-v0_her'
+agent.load_model(path.replace('CHANGE', 'actor'),
+                 path.replace('CHANGE', 'critic'))
 
 episodes = 100
 avg_reward = 0.
 for _ in range(episodes):
     state = env.reset()
     # with objective
-    # goal = state['desired_goal']
-    # her_goal = state['achieved_goal']
-    # state = state['observation']
+    goal = state['desired_goal']
+    her_goal = state['achieved_goal']
+    state = state['observation']
     episode_reward = 0
     done = False
     while not done:
-        # with objective
         # action = agent.select_action(state, evaluate=True)
+        # with objective
         action = agent.select_action(np.concatenate([state, goal]), evaluate=True)
         next_state, reward, done, robot_pos = env.step(action)
         # with objective
-        # next_her_goal = next_state['achieved_goal']
-        # next_state = next_state['observation']
+        next_her_goal = next_state['achieved_goal']
+        next_state = next_state['observation']
         episode_reward += reward
 
         state = next_state
