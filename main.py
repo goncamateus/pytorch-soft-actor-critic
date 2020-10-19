@@ -12,6 +12,8 @@ import wandb
 # import gym_line_follower
 # from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
+from Normalization import NormalizedWrapper
+
 from sac import SAC
 
 
@@ -55,8 +57,8 @@ args = parser.parse_args()
 
 wandb.init(name=f"{args.env_name}-normal", project="Cadeira-RL")
 # Environment
-# env = NormalizedActions(gym.make(args.env_name))
-env = gym.make(args.env_name)
+# env = gym.make(args.env_name)
+env = NormalizedWrapper(gym.make(args.env_name))
 # env = LineFollowerEnv(gui=True, sub_steps=10, max_track_err=0.05,
 #                       max_time=60, power_limit=0.99)
 
@@ -110,7 +112,6 @@ for i_episode in range(500):
                 updates += 1
 
         next_state, reward, done, robot_pos = env.step(action)  # Step
-        env.render()
         episode_steps += 1
         total_numsteps += 1
         episode_reward += reward
@@ -137,7 +138,7 @@ for i_episode in range(500):
             episode_reward = 0
             done = False
             while not done:
-                # env.render()
+                env.unwrapped.render()
                 action = agent.select_action(state, evaluate=True)
 
                 next_state, reward, done, robot_pos = env.step(action)
