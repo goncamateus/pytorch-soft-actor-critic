@@ -3,19 +3,20 @@ import datetime
 import itertools
 
 import gym
+import rc_gym
 import numpy as np
 import torch
 import wandb
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 
-import gym_line_follower
+# import gym_line_follower
 # from gym_line_follower.envs import LineFollowerEnv
 from replay_memory import ReplayGMemory, ReplayMemory
 from sac import SAC
 
 
 parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
-parser.add_argument('--env-name', default="LineFollower-v0",
+parser.add_argument('--env-name', default="LunarLanderContinuous-v2",
                     help='Mujoco Gym environment (default: LineFollower-v0)')
 parser.add_argument('--policy', default="Gaussian",
                     help='Policy Type: Gaussian | Deterministic (default: Gaussian)')
@@ -109,6 +110,7 @@ for i_episode in range(500):
                 updates += 1
 
         next_state, reward, done, robot_pos = env.step(action)  # Step
+        env.render()
         episode_steps += 1
         total_numsteps += 1
         episode_reward += reward
